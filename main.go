@@ -8,6 +8,31 @@ import (
 	"strings"
 )
 
+type cache struct {
+	tables []table
+}
+
+type table struct {
+	isLocked bool
+	name     string
+	data     [][]string
+}
+
+func (t *table) save() {
+	if t.isLocked {
+		for t.isLocked {
+
+		}
+	}
+	t.isLocked = true
+	file, _ := os.Create(t.name)
+	defer file.Close()
+	for _, row := range t.data {
+		file.WriteString(row[0] + "," + row[1] + "\n")
+	}
+	t.isLocked = false
+}
+
 const (
 	CONN_HOST = "localhost"
 	CONN_PORT = "23"
@@ -82,24 +107,45 @@ func handleRequest(command string) {
 		fmt.Println("select")
 	case "delete":
 		fmt.Println("delete")
-		
+
 	case "update":
 		fmt.Println("update")
 	}
 }
 
-func insert_(key string, value string, table_name string) {
-
+func (t *table) insert_(key string, value string) {
+	row := []string{key, value}
+	//Возможное место для мютекса
+	t.data = append(t.data, row)
+	go t.save()
 }
 
-func select_(key string, table_name string) []string {
-
+func (t *table) select_(key string) []string {
+	selecting_data := []string{}
+	for _, row := range t.data {
+		if row[0] == key {
+			selecting_data = append(selecting_data, row[1])
+		}
+	}
+	return selecting_data
 }
 
-func delete_(key string, table_name string) {
+func (t *table) delete_(key string) {
+	for index, row := range t.data {
+		if row[0] == key {
+			t.data = append(t.data[:index], t.data[index+1:]...)
+		}
 
+	}
+	go t.save()
 }
 
-func update_(key string, table_name string) {
+func (t *table) update_(key string, value string) {
+	for i, row := range t.data {
+		if row[0] == key {
+			t.data[i][1] = value
+		}
 
+	}
+	go t.save()
 }
