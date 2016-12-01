@@ -75,7 +75,7 @@ func (t *table) save() {
 
 const (
 	CONN_HOST = "localhost"
-	CONN_PORT = "23"
+	CONN_PORT = "8888"
 	CONN_TYPE = "tcp"
 )
 
@@ -108,7 +108,9 @@ func main() {
 func handleConnection(conn net.Conn, c *cache) {
 	// Make a buffer to hold incoming data.
 	var buf [512]byte
+	empty_string := ""
 	for {
+		copy(buf[:], empty_string) //make  buffer empty
 		_, err := conn.Read(buf[0:])
 		if err != nil {
 			return
@@ -128,6 +130,8 @@ func handleRequest(command string, c *cache, conn net.Conn) {
 	fmt.Println(params[0])
 	// remove empty entries and remove whitespaces
 	switch strings.ToLower(params[0]) {
+	case "exit":
+		os.Exit(0)
 	case "insert":
 		fmt.Println("switching")
 
@@ -138,7 +142,7 @@ func handleRequest(command string, c *cache, conn net.Conn) {
 			t.insert_(params[1], params[2])
 
 		} else {
-			conn.Write([]byte(string("Your command didn't match the pattern")))
+			conn.Write([]byte(string("Your command didn't match the pattern\n")))
 		}
 	case "select":
 		fmt.Println("try to select")
@@ -148,13 +152,15 @@ func handleRequest(command string, c *cache, conn net.Conn) {
 			t := c.get(params[3])
 			data := ""
 			for _, elem := range t.select_(params[1]) {
-				data += elem + "\n"
+				data += elem + " "
 				conn.Write([]byte(string(elem) + " "))
 
 			}
-			fmt.Println(data)
+			conn.Write([]byte("\n"))
+
+			fmt.Println(data + "\n newline was sended")
 		} else {
-			conn.Write([]byte(string("Your command didn't match the pattern")))
+			conn.Write([]byte(string("Your command didn't match the pattern\n")))
 		}
 		fmt.Println("select")
 	case "delete":
@@ -163,21 +169,21 @@ func handleRequest(command string, c *cache, conn net.Conn) {
 			t := c.get(params[3])
 			t.delete_(params[1])
 		} else {
-			conn.Write([]byte(string("Your command didn't match the pattern")))
+			conn.Write([]byte(string("Your command didn't match the pattern\n")))
 		}
 		fmt.Println("delete")
 
 	case "update":
-		update_regex := regexp.MustCompile(`/^update\s+\w+\s+to\s+\w+\s+in\s+[A-z]+[A-z_0-9]*/g`)
+		update_regex := regexp.MustCompile(`^update\s+\w+\s+to\s+\w+\s+in\s+[A-z]+[A-z_0-9]*`)
 		if update_regex.MatchString(command) {
 			t := c.get(params[5])
 			t.update_(params[1], params[3])
 		} else {
-			conn.Write([]byte(string("Your command didn't match the pattern")))
+			conn.Write([]byte(string("Your command didn't match the pattern\n")))
 		}
 		fmt.Println("update")
 	default:
-		conn.Write([]byte(string("Your command didn't match the pattern")))
+		conn.Write([]byte(string("Your command didn't match the pattern\n")))
 	}
 }
 
@@ -194,12 +200,13 @@ func (t *table) additem(value []string) {
 }
 func (t *table) select_(key string) []string {
 	selecting_data := []string{}
+	fmt.Println(*t.data)
 	for _, row := range *t.data {
 		if row[0] == key {
 			selecting_data = append(selecting_data, row[1])
 		}
 	}
-	fmt.Println(selecting_data[0] + " selecting data")
+
 	return selecting_data
 }
 
